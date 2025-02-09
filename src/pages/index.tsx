@@ -16,7 +16,9 @@ export default function Home() {
     const response = await fetch(
       `${process.env.NEXT_PUBLIC_BACKEND_PATH}/${
         activeTab === "current" ? "task" : "complated"
-      }`
+      }`,{
+        headers: {"Type-Content": "application/json", "Access-Control-Allow-Origin": "true"}
+      }
     );
     const data = await response.json();
     setTasks(data);
