@@ -1,9 +1,10 @@
+// pages/index.tsx
 import { useState, useEffect } from "react";
 
 type Task = {
   id: number;
   text: string;
-  complated: boolean;
+  completed: boolean;
 };
 
 export default function Home() {
@@ -11,79 +12,85 @@ export default function Home() {
   const [newTask, setNewTask] = useState("");
   const [activeTab, setActiveTab] = useState("current");
 
-  // Fetch tasks from the JSON server
+  // Fetch tasks from the Express server
   const fetchTasks = async () => {
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_BACKEND_PATH}/${
-        activeTab === "current" ? "task" : "complated"
-      }`
-    );
-    const data = await response.json();
-    setTasks(data);
+    try {
+      // Pass completed query param: "true" for completed tab, "false" for current tasks.
+      const completed = activeTab === "completed" ? "true" : "false";
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_PATH}/tasks?completed=${completed}`
+      );
+      const data = await res.json();
+      setTasks(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error("Error fetching tasks:", error);
+      setTasks([]);
+    }
   };
 
   useEffect(() => {
     fetchTasks();
   }, [activeTab]);
 
+  // Create a new task
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newTask.trim() === "") return;
 
-    const task = { text: newTask, complated: false };
-    const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_PATH}/task`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(task),
-    });
-
-    if (response.ok) {
-      fetchTasks();
-      setNewTask("");
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_PATH}/tasks`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: newTask }),
+      });
+      if (res.ok) {
+        setNewTask("");
+        fetchTasks();
+      } else {
+        console.error("Failed to create task");
+      }
+    } catch (error) {
+      console.error("Error creating task:", error);
     }
   };
 
-  const toggleTask = async (task: Task) => {
-    const updatedTask = { ...task, complated: !task.complated };
-
-    // Move task to the appropriate table
-    await fetch(
-      `${process.env.NEXT_PUBLIC_BACKEND_PATH}/${task.complated ? "complated" : "task"}/${
-        task.id
-      }`,
-      {
-        method: "DELETE",
+  // Toggle a task's completed status
+  const toggleTask = async (id: number) => {
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_PATH}/tasks/${id}/toggle`,
+        { method: "PUT" }
+      );
+      if (res.ok) {
+        fetchTasks();
+      } else {
+        console.error("Failed to toggle task");
       }
-    );
-
-    await fetch(
-      `${process.env.NEXT_PUBLIC_BACKEND_PATH}/${task.complated ? "task" : "complated"}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(updatedTask),
-      }
-    );
-
-    fetchTasks();
+    } catch (error) {
+      console.error("Error toggling task:", error);
+    }
   };
 
+  // Delete a task
   const deleteTask = async (id: number) => {
-    await fetch(
-      `${process.env.NEXT_PUBLIC_BACKEND_PATH}/${
-        activeTab === "current" ? "task" : "complated"
-      }/${id}`,
-      {
-        method: "DELETE",
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_PATH}/tasks/${id}`,
+        { method: "DELETE" }
+      );
+      if (res.ok) {
+        fetchTasks();
+      } else {
+        console.error("Failed to delete task");
       }
-    );
-
-    fetchTasks();
+    } catch (error) {
+      console.error("Error deleting task:", error);
+    }
   };
 
   return (
     <div className="w-full flex justify-center bg-light p-4">
-      <div className="max-w-[800px] w-full h-[100vh] flex flex-col justify-center items-center">
+      <div className="max-w-[800px] w-full h-[100vh] flex flex-col items-center">
         <h1 className="text-3xl font-semibold my-4">Tec-Task</h1>
 
         <form onSubmit={handleSubmit} className="w-full flex gap-2 mb-4">
@@ -112,9 +119,9 @@ export default function Home() {
             Current Tasks
           </button>
           <button
-            onClick={() => setActiveTab("complated")}
+            onClick={() => setActiveTab("completed")}
             className={`px-4 py-2 ${
-              activeTab === "complated" ? "border-b-2 border-blue-500" : ""
+              activeTab === "completed" ? "border-b-2 border-blue-500" : ""
             }`}
           >
             Completed Tasks
@@ -122,22 +129,20 @@ export default function Home() {
         </div>
 
         <div className="w-full">
-          {Array.isArray(tasks) && tasks.map((task) => (
+          {tasks.map((task) => (
             <div
               key={task.id}
               className="flex justify-between items-center bg-white shadow p-2 mb-2 rounded"
             >
-              <span
-                className={task.complated ? "line-through text-gray-500" : ""}
-              >
+              <span className={task.completed ? "line-through text-gray-500" : ""}>
                 {task.text}
               </span>
               <div className="flex gap-2">
                 <button
-                  onClick={() => toggleTask(task)}
+                  onClick={() => toggleTask(task.id)}
                   className="text-green-500"
                 >
-                  {task.complated ? "Undo" : "Complete"}
+                  {task.completed ? "Undo" : "Complete"}
                 </button>
                 <button
                   onClick={() => deleteTask(task.id)}
