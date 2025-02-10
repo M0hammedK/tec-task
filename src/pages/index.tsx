@@ -18,7 +18,8 @@ export default function Home() {
       // Pass completed query param: "true" for completed tab, "false" for current tasks.
       const completed = activeTab === "completed" ? "true" : "false";
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_PATH}/tasks?completed=${completed}`
+        `https://tec-task-server.onrender.com/tasks?completed=${completed}`,
+        { mode: "no-cors" }
       );
       const data = await res.json();
       setTasks(Array.isArray(data) ? data : []);
@@ -38,10 +39,11 @@ export default function Home() {
     if (newTask.trim() === "") return;
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_PATH}/tasks`, {
+      const res = await fetch(`https://tec-task-server.onrender.com/tasks`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: newTask }),
+        mode: "no-cors",
       });
       if (res.ok) {
         setNewTask("");
@@ -58,8 +60,8 @@ export default function Home() {
   const toggleTask = async (id: number) => {
     try {
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_PATH}/tasks/${id}/toggle`,
-        { method: "PUT" }
+        `https://tec-task-server.onrender.com/tasks/${id}/toggle`,
+        { method: "PUT", mode: "no-cors" }
       );
       if (res.ok) {
         fetchTasks();
@@ -75,8 +77,8 @@ export default function Home() {
   const deleteTask = async (id: number) => {
     try {
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_PATH}/tasks/${id}`,
-        { method: "DELETE" }
+        `https://tec-task-server.onrender.com/tasks/${id}`,
+        { method: "DELETE", mode: "no-cors" }
       );
       if (res.ok) {
         fetchTasks();
@@ -134,7 +136,9 @@ export default function Home() {
               key={task.id}
               className="flex justify-between items-center bg-white shadow p-2 mb-2 rounded"
             >
-              <span className={task.completed ? "line-through text-gray-500" : ""}>
+              <span
+                className={task.completed ? "line-through text-gray-500" : ""}
+              >
                 {task.text}
               </span>
               <div className="flex gap-2">
