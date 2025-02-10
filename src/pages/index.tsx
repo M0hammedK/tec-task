@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 type Task = {
   id: number;
   text: string;
-  completed: boolean;
 };
 
 export default function Home() {
@@ -18,9 +17,11 @@ export default function Home() {
       // Pass completed query param: "true" for completed tab, "false" for current tasks.
       const completed = activeTab === "completed" ? "true" : "false";
       const res = await fetch(
-        `https://tec-task-server.onrender.com/tasks?completed=${completed}`,
-        { mode: "no-cors" }
+        `https://tec-task-server.onrender.com/${
+          completed === "true" ? "complated" : "tasks"
+        }`
       );
+
       const data = await res.json();
       setTasks(Array.isArray(data) ? data : []);
     } catch (error) {
@@ -37,13 +38,13 @@ export default function Home() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newTask.trim() === "") return;
+    console.log(newTask);
 
     try {
       const res = await fetch(`https://tec-task-server.onrender.com/tasks`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: newTask }),
-        mode: "no-cors",
       });
       if (res.ok) {
         setNewTask("");
@@ -57,12 +58,19 @@ export default function Home() {
   };
 
   // Toggle a task's completed status
-  const toggleTask = async (id: number) => {
+  const toggleTask = async (task: Task) => {
     try {
       const res = await fetch(
-        `https://tec-task-server.onrender.com/tasks/${id}/toggle`,
-        { method: "PUT", mode: "no-cors" }
+        `https://tec-task-server.onrender.com/${
+          activeTab === "completed" ? "tasks" : "complated"
+        }`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: task.text }),
+        }
       );
+      await deleteTask(task.id);
       if (res.ok) {
         fetchTasks();
       } else {
@@ -76,9 +84,12 @@ export default function Home() {
   // Delete a task
   const deleteTask = async (id: number) => {
     try {
+      console.log(activeTab === "completed");
       const res = await fetch(
-        `https://tec-task-server.onrender.com/tasks/${id}`,
-        { method: "DELETE", mode: "no-cors" }
+        `https://tec-task-server.onrender.com/${
+          activeTab === "completed" ? "complated" : "tasks"
+        }/${id}`,
+        { method: "DELETE" }
       );
       if (res.ok) {
         fetchTasks();
@@ -92,7 +103,7 @@ export default function Home() {
 
   return (
     <div className="w-full flex justify-center bg-light p-4">
-      <div className="max-w-[800px] w-full h-[100vh] flex flex-col items-center">
+      <div className="max-w-[800px] w-full h-[100vh] flex flex-col justify-center items-center">
         <h1 className="text-3xl font-semibold my-4">Tec-Task</h1>
 
         <form onSubmit={handleSubmit} className="w-full flex gap-2 mb-4">
@@ -137,16 +148,18 @@ export default function Home() {
               className="flex justify-between items-center bg-white shadow p-2 mb-2 rounded"
             >
               <span
-                className={task.completed ? "line-through text-gray-500" : ""}
+                className={
+                  activeTab === "completed" ? "line-through text-gray-500" : ""
+                }
               >
                 {task.text}
               </span>
               <div className="flex gap-2">
                 <button
-                  onClick={() => toggleTask(task.id)}
+                  onClick={() => toggleTask(task)}
                   className="text-green-500"
                 >
-                  {task.completed ? "Undo" : "Complete"}
+                  {activeTab === "completed" ? "Undo" : "Complete"}
                 </button>
                 <button
                   onClick={() => deleteTask(task.id)}
